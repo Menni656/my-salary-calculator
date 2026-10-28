@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор зарплаты</title>
+<style>
+  :root {
+    --bg:#f5f7fa; --card:#fff; --text:#1a1a2e; --muted:#6b7280;
+    --accent:#3b82f6; --border:#e5e7eb; --shadow:0 4px 20px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);color:var(--text);min-height:100vh;
+    padding:16px;display:flex;justify-content:center;
+  }
+  .container{width:100%;max-width:560px}
+
+  /* ⭐ Sticky плашка «Максимум» */
+  .max-card{
+    position:sticky;top:8px;z-index:20;
+    background:linear-gradient(135deg,#10b981,#059669);color:#fff;
+    border-radius:16px;padding:14px 18px;margin-bottom:16px;
+    box-shadow:0 6px 24px rgba(16,185,129,.35);
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    backdrop-filter:blur(8px);
+  }
+  .max-card .max-title{
+    font-size:12px;text-transform:uppercase;letter-spacing:.6px;opacity:.9;font-weight:600;
+  }
+  .max-card .max-sub{font-size:11px;opacity:.8;margin-top:2px}
+  .max-card .max-values{text-align:right}
+  .max-card .max-gross{
+    font-size:13px;opacity:.9;text-decoration:line-through;letter-spacing:.2px;
+  }
+  .max-card .max-net{
+    font-size:22px;font-weight:700;letter-spacing:-.3px;line-height:1.1;
+  }
+
+  h1{font-size:22px;margin-bottom:4px;text-align:center}
+  .subtitle{color:var(--muted);font-size:13px;text-align:center;margin-bottom:20px}
+  .card{background:var(--card);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+  .section-title{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;margin-bottom:14px}
+  .field{margin-bottom:18px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;font-weight:500;margin-bottom:8px;gap:8px}
+  .field label .base{color:var(--muted);font-weight:400;font-size:12px}
+  .input-row{display:flex;align-items:center;gap:10px}
+  input[type=number]{
+    flex:1;padding:12px 14px;font-size:16px;border:2px solid var(--border);
+    border-radius:10px;outline:none;background:#fff;color:var(--text);width:100%;
+  }
+  input[type=number]:focus{border-color:var(--accent)}
+  .suffix{color:var(--muted);font-size:16px;font-weight:500}
+  .slider{width:100%;margin-top:8px;accent-color:var(--accent)}
+  .readonly-field{display:flex;justify-content:space-between;padding:12px 14px;background:#f9fafb;border-radius:10px;font-size:15px}
+  .readonly-field .label{color:var(--muted)}
+  .readonly-field .value{font-weight:600}
+  select{width:100%;padding:12px 14px;font-size:16px;border:2px solid var(--border);border-radius:10px;background:#fff;color:var(--text);outline:none}
+  select:focus{border-color:var(--accent)}
+  .result-card{
+    background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;
+    padding:24px 20px;border-radius:16px;box-shadow:0 6px 24px rgba(59,130,246,.3);margin-bottom:16px;
+  }
+  .result-label{font-size:13px;opacity:.9;margin-bottom:6px}
+  .result-amount{font-size:36px;font-weight:700;margin-bottom:18px;letter-spacing:-.5px}
+  .result-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-top:1px solid rgba(255,255,255,.15)}
+  .result-row:first-of-type{border-top:none}
+  .result-row .k{opacity:.9}
+  .result-row .v{font-weight:600}
+  .breakdown{display:flex;flex-direction:column;gap:8px}
+  .breakdown-row{display:flex;justify-content:space-between;padding:12px 14px;background:#f9fafb;border-radius:10px;font-size:14px}
+  .breakdown-row .k{color:var(--muted)}
+  .breakdown-row .v{font-weight:600}
+  .breakdown-row.highlight{background:#ecfdf5}
+  .breakdown-row.highlight .k{color:#065f46;font-weight:600}
+  .breakdown-row.highlight .v{color:#065f46}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+  @media(max-width:400px){
+    .result-amount{font-size:30px}.card{padding:16px}
+    .max-card .max-net{font-size:19px}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ⭐ Максимум — всегда виден при прокрутке -->
+  <div class="max-card">
+    <div>
+      <div class="max-title">Максимум зарплаты</div>
+      <div class="max-sub">Оклад + инструкции 100% + KPI 100%</div>
+    </div>
+    <div class="max-values">
+      <div class="max-gross" id="maxGross">0 ₽</div>
+      <div class="max-net" id="maxNet">0 ₽</div>
+    </div>
+  </div>
+
+  <h1>💰 Калькулятор зарплаты</h1>
+  <p class="subtitle">Оклад + Должностные инструкции + KPI с вычетом НДФЛ</p>
+
+  <div class="card">
+    <div class="section-title">Начисления (gross, до налога)</div>
+
+    <div class="field">
+      <label><span>Оклад</span><span class="base">фиксированно</span></label>
+      <div class="readonly-field">
+        <span class="label">Выплачивается полностью</span>
+        <span class="value">125 000 ₽</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label><span>Должностные инструкции</span><span class="base">250 000 ₽ × %</span></label>
+      <div class="input-row">
+        <input type="number" id="dutiesPct" value="100" min="0" max="100" step="1" inputmode="decimal">
+        <span class="suffix">%</span>
+      </div>
+      <input type="range" class="slider" id="dutiesSlider" value="100" min="0" max="100" step="1">
+    </div>
+
+    <div class="field">
+      <label><span>KPI</span><span class="base">125 000 ₽ × %</span></label>
+      <div class="input-row">
+        <input type="number" id="kpiPct" value="100" min="0" max="100" step="1" inputmode="decimal">
+        <span class="suffix">%</span>
+      </div>
+      <input type="range" class="slider" id="kpiSlider" value="100" min="0" max="100" step="1">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">НДФЛ</div>
+    <div class="field">
+      <label><span>Месяц выплаты</span><span class="base">для прогрессивной шкалы</span></label>
+      <select id="month">
+        <option value="1">Январь</option><option value="2">Февраль</option>
+        <option value="3">Март</option><option value="4">Апрель</option>
+        <option value="5">Май</option><option value="6">Июнь</option>
+        <option value="7">Июль</option><option value="8">Август</option>
+        <option value="9">Сентябрь</option><option value="10">Октябрь</option>
+        <option value="11">Ноябрь</option><option value="12">Декабрь</option>
+      </select>
+    </div>
+    <div class="hint">НДФЛ по прогрессивной шкале РФ (с 2025 г.), нарастающим итогом с начала года. Предполагается, что доход в предыдущие месяцы года был таким же, как сейчас.</div>
+  </div>
+
+  <div class="result-card">
+    <div class="result-label">На руки за месяц</div>
+    <div class="result-amount" id="netAmount">0 ₽</div>
+    <div class="result-row"><span class="k">Начислено (gross)</span><span class="v" id="grossAmount">0 ₽</span></div>
+    <div class="result-row"><span class="k">НДФЛ</span><span class="v" id="ndflAmount">0 ₽</span></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Детализация</div>
+    <div class="breakdown">
+      <div class="breakdown-row"><span class="k">Оклад</span><span class="v" id="bOklad">0 ₽</span></div>
+      <div class="breakdown-row"><span class="k">Должностные инструкции</span><span class="v" id="bDuties">0 ₽</span></div>
+      <div class="breakdown-row"><span class="k">KPI</span><span class="v" id="bKpi">0 ₽</span></div>
+      <div class="breakdown-row"><span class="k">Итого начислено</span><span class="v" id="bGross">0 ₽</span></div>
+      <div class="breakdown-row"><span class="k">НДФЛ</span><span class="v" id="bNdfl">0 ₽</span></div>
+      <div class="breakdown-row highlight"><span class="k">На руки</span><span class="v" id="bNet">0 ₽</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const OKLAD = 125000, DUTIES_BASE = 250000, KPI_BASE = 125000;
+  const MAX_GROSS = OKLAD + DUTIES_BASE + KPI_BASE; // 500 000 ₽
+
+  const fmtRub = n => new Intl.NumberFormat('ru-RU', {
+    style:'currency', currency:'RUB', minimumFractionDigits:0, maximumFractionDigits:0
+  }).format(n);
+
+  // Прогрессивная шкала НДФЛ 2025 (нарастающим итогом)
+  function taxCumulative(annualIncome) {
+    const brackets = [[2400000,.13],[5000000,.15],[20000000,.18],[50000000,.20],[Infinity,.22]];
+    let tax = 0, prev = 0;
+    for (const [limit, rate] of brackets) {
+      if (annualIncome <= prev) break;
+      tax += (Math.min(annualIncome, limit) - prev) * rate;
+      prev = limit;
+    }
+    return tax;
+  }
+
+  function ndflForMonth(monthlyIncome, month) {
+    return Math.round(
+      taxCumulative(monthlyIncome * month) - taxCumulative(monthlyIncome * (month - 1))
+    );
+  }
+
+  const clampPct = v => Math.max(0, Math.min(100, isNaN(v) ? 0 : v));
+
+  function updateMax(month) {
+    const maxNdfl = ndflForMonth(MAX_GROSS, month);
+    const maxNet  = MAX_GROSS - maxNdfl;
+    document.getElementById('maxGross').textContent = 'gross ' + fmtRub(MAX_GROSS);
+    document.getElementById('maxNet').textContent   = fmtRub(maxNet) + ' на руки';
+  }
+
+  function calc() {
+    const dutiesPct = clampPct(parseFloat(document.getElementById('dutiesPct').value));
+    const kpiPct    = clampPct(parseFloat(document.getElementById('kpiPct').value));
+
+    const dutiesAmt = DUTIES_BASE * dutiesPct / 100;
+    const kpiAmt    = KPI_BASE * kpiPct / 100;
+    const gross     = OKLAD + dutiesAmt + kpiAmt;
+
+    const month = parseInt(document.getElementById('month').value) || 1;
+    const ndfl  = ndflForMonth(gross, month);
+    const net   = gross - ndfl;
+
+    document.getElementById('netAmount').textContent   = fmtRub(net);
+    document.getElementById('grossAmount').textContent = fmtRub(gross);
+    document.getElementById('ndflAmount').textContent  = '−' + fmtRub(ndfl);
+    document.getElementById('bOklad').textContent      = fmtRub(OKLAD);
+    document.getElementById('bDuties').textContent     = fmtRub(dutiesAmt);
+    document.getElementById('bKpi').textContent        = fmtRub(kpiAmt);
+    document.getElementById('bGross').textContent      = fmtRub(gross);
+    document.getElementById('bNdfl').textContent       = '−' + fmtRub(ndfl);
+    document.getElementById('bNet').textContent        = fmtRub(net);
+
+    updateMax(month);
+  }
+
+  function bindPair(numId, sliderId) {
+    const num = document.getElementById(numId);
+    const slider = document.getElementById(sliderId);
+    num.addEventListener('input', () => {
+      const v = clampPct(parseFloat(num.value));
+      slider.value = v;
+      calc();
+    });
+    num.addEventListener('blur', () => {
+      num.value = clampPct(parseFloat(num.value));
+      calc();
+    });
+    slider.addEventListener('input', () => { num.value = slider.value; calc(); });
+  }
+  bindPair('dutiesPct','dutiesSlider');
+  bindPair('kpiPct','kpiSlider');
+
+  document.getElementById('month').addEventListener('change', calc);
+
+  document.getElementById('month').value = new Date().getMonth() + 1;
+  calc();
+</script>
+</body>
+</html>
